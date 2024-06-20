@@ -55,7 +55,7 @@ public class UserController {
                 return ResponseEntity.ok(response);
             } else {
                 Map<String, String> response = new LinkedHashMap<>();
-                response.put("status", "LOGIN FAILED");
+                response.put("status", "LOGIN FAILED!!");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
             }
         } catch (AuthenticationException e) {
