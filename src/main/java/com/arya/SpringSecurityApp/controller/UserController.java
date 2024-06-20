@@ -32,7 +32,7 @@ public class UserController {
     @PostMapping("register")
     public ResponseEntity<?> register(@RequestBody User user) {
         if (service.existsByUsername(user.getUsername())) {
-            return ResponseEntity.badRequest().body(Collections.singletonMap("message", "Username already exists...."));
+            return ResponseEntity.badRequest().body(Collections.singletonMap("message", "Username already exists!!."));
         }
         User newUser = service.saveUser(user);
         Map<String, Object> response = new HashMap<>();
