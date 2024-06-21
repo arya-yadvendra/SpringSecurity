@@ -27,6 +27,7 @@ public class StudentController {
         return (CsrfToken) request.getAttribute("_csrf");
     }
 
+
     @GetMapping("students")
     public GenericResponse<List<Student>> getStudents(){
         GenericResponse<List<Student>> response = new GenericResponse<>();
@@ -35,9 +36,10 @@ public class StudentController {
         response.setData(students);
         return response;
     }
+
+
     @PostMapping("add-student")
     public GenericResponse<Student> addStudent(@RequestBody Student student) {
-
         Student newStudent = new Student();
         newStudent.setId(nextId++);
         newStudent.setName(student.getName());
@@ -50,6 +52,7 @@ public class StudentController {
         response.setData(student);
         return response;
     }
+
 
     @DeleteMapping("students/{id}")
     public ResponseEntity<String> deleteStudent(@PathVariable Long id) {
