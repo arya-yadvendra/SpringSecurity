@@ -1,15 +1,1 @@
-#spring:
-#  mail:
-#    hostname: smtp.gmail.com
-#    port:  587
-#    username: yadvendra.mca22.du@gmail.com
-#    password: bxak vqdk omaa bqtb
-#    properties:
-#      mail:
-#        transport:
-#          protocol: smtp
-#        smtp:
-#          auth: true
-#          starttls:
-#            enable: true
-#        debug: true
+
