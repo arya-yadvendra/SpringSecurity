@@ -55,21 +55,32 @@ public class OTPService {
     }
 
     public boolean validateOTP(String username, String otp) {
-        System.out.println("Username" + username);
-        Optional<OTP> otpEntityOptional = Optional.ofNullable(otpRepository.findByUsername(username));
-        System.out.println("OTP Entity:" + otpEntityOptional);
-        if (otpEntityOptional.isEmpty()) {
-            System.out.println("Inside false statement");
-            return false;
-        }
-
-        OTP otpEntity = otpEntityOptional.get();
-        if (otpEntity.getValidUntil().isBefore(LocalDateTime.now())) {
-            //otpRepository.deleteByUsername(username);
+        OTP otpEntity = otpRepository.findByUsername(username);
+        if (otpEntity == null || otpEntity.getValidUntil().isBefore(LocalDateTime.now())
+                || !otpEntity.getOtp().equals(otp)) {
+            if (otpEntity != null) {
+                otpRepository.deleteByUsername(username);
+            }
             return false;
         }
         return true;
     }
+    // public boolean validateOTP(String username, String otp) {
+    //     System.out.println("Username" + username);
+    //     Optional<OTP> otpEntityOptional = Optional.ofNullable(otpRepository.findByUsername(username));
+    //     System.out.println("OTP Entity:" + otpEntityOptional);
+    //     if (otpEntityOptional.isEmpty()) {
+    //         System.out.println("Inside false statement");
+    //         return false;
+    //     }
+
+    //     OTP otpEntity = otpEntityOptional.get();
+    //     if (otpEntity.getValidUntil().isBefore(LocalDateTime.now())) {
+    //         //otpRepository.deleteByUsername(username);
+    //         return false;
+    //     }
+    //     return true;
+    // }
 
     private void sendEmail(String username, String otp) {
         final String subject = "Password Forget Request";
