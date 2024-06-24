@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -116,6 +117,7 @@ public class UserController {
 
 
     @GetMapping("all-users")
+    @PreAuthorize("hasRole('admin')")
     public ResponseEntity<GenericResponse<List<String>>> getAllUsernames() {
         GenericResponse<List<String>> response = new GenericResponse<>();
         List<String> usernames = userService.getAllUsernames();
