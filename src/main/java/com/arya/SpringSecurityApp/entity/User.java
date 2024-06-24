@@ -1,11 +1,11 @@
-package com.arya.SpringSecurityApp.model;
+package com.arya.SpringSecurityApp.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
-import org.antlr.v4.runtime.misc.NotNull;
 import org.hibernate.annotations.GenericGenerator;
 
 @Data
@@ -21,14 +21,13 @@ public class User {
     private String username;
 
     @NotNull
-    private String name;
-
-    @NotNull
-    private String address;
-
-    @NotNull
     private String password;
 
     @NotNull
+    private String name;
+
     private String phone_no;
+
+
+    private String address;
 }

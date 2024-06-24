@@ -2,11 +2,8 @@ package com.arya.SpringSecurityApp.controller;
 
 
 import com.arya.SpringSecurityApp.response.GenericResponse;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import com.arya.SpringSecurityApp.model.Student;
-import org.springframework.security.web.csrf.CsrfToken;
-import jakarta.servlet.http.HttpServletRequest;
+import com.arya.SpringSecurityApp.entity.Student;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,11 +18,6 @@ public class StudentController {
     ));
 
     private long nextId = 3L;
-
-    @GetMapping("csrf-token")
-    public CsrfToken getCsrfToken(HttpServletRequest request) {
-        return (CsrfToken) request.getAttribute("_csrf");
-    }
 
 
     @GetMapping("students")
@@ -54,19 +46,27 @@ public class StudentController {
     }
 
 
-    @DeleteMapping("students/{id}")
-    public ResponseEntity<String> deleteStudent(@PathVariable Long id) {
-        // Finding the student with the given ID
+    @DeleteMapping("student/{id}")
+    public GenericResponse<String> deleteStudent(@PathVariable Long id) {
         Optional<Student> studentOptional = students.stream()
                 .filter(student -> student.getId().equals(id))
                 .findFirst();
+
+        GenericResponse<String> response = new GenericResponse<>();
+
         if (studentOptional.isPresent()) {
-            // Removing the student from the list
             students.remove(studentOptional.get());
-            return ResponseEntity.ok("Student with ID " + id + " deleted successfully");
-        } else {
-            return ResponseEntity.notFound().build();
+            response.setMessage("Student with ID " + id + " deleted successfully");
+            response.setStatus("SUCCESS");
+            response.setData("Deleted ID: " + id);
         }
+        else {
+            response.setMessage("Student with ID " + id + " not found");
+            response.setStatus("FAILURE");
+            response.setData("Deletion failed for ID: " + id);
+        }
+        return response;
     }
+
 
 }

@@ -49,8 +49,8 @@ public class SecurityConfig {
 
         http.csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(request -> request
-                        .requestMatchers("register", "login", "forgot-password","reset-password")
-                        .permitAll()
+                        .requestMatchers("register", "login", "forgot-password","reset-password").permitAll()
+                        .requestMatchers("all-users").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
@@ -67,14 +67,6 @@ public class SecurityConfig {
 //        return args -> {
 //            JdbcUserDetailsManager manager = (JdbcUserDetailsManager) userDetailsService;
 //
-//            if (!manager.userExists("user1")) {
-//                UserDetails user1 = User.withUsername("user1")
-//                        .password(passwordEncoder().encode("password1"))
-//                        .roles("USER")
-//                        .build();
-//                manager.createUser(user1);
-//            }
-//
 //            if (!manager.userExists("admin")) {
 //                UserDetails admin = User.withUsername("admin")
 //                        .password(passwordEncoder().encode("adminPass"))
@@ -89,6 +81,7 @@ public class SecurityConfig {
     public PasswordEncoder passwordEncoder(){
         return new BCryptPasswordEncoder();
     }
+
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();

@@ -1,6 +1,6 @@
 package com.arya.SpringSecurityApp.repository;
 
-import com.arya.SpringSecurityApp.model.User;
+import com.arya.SpringSecurityApp.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

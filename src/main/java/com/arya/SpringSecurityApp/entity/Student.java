@@ -1,4 +1,4 @@
-package com.arya.SpringSecurityApp.model;
+package com.arya.SpringSecurityApp.entity;
 
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;

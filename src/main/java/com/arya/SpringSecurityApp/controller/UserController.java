@@ -1,12 +1,18 @@
 package com.arya.SpringSecurityApp.controller;
 
+
+import com.arya.SpringSecurityApp.exception.InvalidPasswordException;
+import com.arya.SpringSecurityApp.exception.InvalidPhoneNoException;
+import com.arya.SpringSecurityApp.exception.InvalidUsernameException;
 import com.arya.SpringSecurityApp.request.ChangePasswordRequest;
 import com.arya.SpringSecurityApp.request.ForgetPasswordRequest;
-import com.arya.SpringSecurityApp.model.User;
+import com.arya.SpringSecurityApp.entity.User;
 import com.arya.SpringSecurityApp.request.ResetPasswordRequest;
+import com.arya.SpringSecurityApp.response.GenericResponse;
 import com.arya.SpringSecurityApp.service.JwtService;
 import com.arya.SpringSecurityApp.service.OTPService;
 import com.arya.SpringSecurityApp.service.UserService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,8 +22,13 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.*;
+import javax.naming.InvalidNameException;
+import java.util.List;
 
+import static org.springframework.http.HttpStatus.*;
+
+
+@Slf4j
 @RestController
 public class UserController {
 
@@ -35,60 +46,83 @@ public class UserController {
 
     @PostMapping("register")
     public ResponseEntity<?> register(@RequestBody User user) {
-        Map<String, Object> response = new HashMap<>();
-
-        if (user.getUsername() == null || user.getPassword() == null ||
-                user.getName() == null || user.getPhone_no() == null || user.getAddress() == null) {
-            response.put("status", HttpStatus.BAD_REQUEST.value());
-            response.put("message", "Fields not allowed to be null");
-            return ResponseEntity.badRequest().body(response);
-        }
+        GenericResponse<User> response = new GenericResponse<>();
 
         if (userService.existsByUsername(user.getUsername())) {
-            response.put("status", HttpStatus.BAD_REQUEST.value());
-            response.put("message", "Username already exists!!");
-            return ResponseEntity.badRequest().body(response);
+            response.setStatus(BAD_REQUEST.toString());
+            response.setMessage("Username already exist!");
+            return ResponseEntity.status(BAD_REQUEST).body(response);
         }
 
-        User newUser = userService.saveUser(user);
-        response.put("status", HttpStatus.OK.value());
-        response.put("message", "User registered successfully");
-        response.put("user", newUser);
-        return ResponseEntity.ok(response);
+        if (user.getUsername() == null || user.getPassword() == null) {
+            response.setStatus(BAD_REQUEST.toString());
+            response.setMessage("Email, Password, Name are not allowed to be null");
+            return ResponseEntity.status(BAD_REQUEST).body(response);
+        }
+
+        if (user.getName().length()<2){
+            response.setStatus(BAD_REQUEST.toString());
+            response.setMessage("Name field seems to be incorrect");
+            return ResponseEntity.status(BAD_REQUEST).body(response);
+        }
+
+        try {
+            User newUser = userService.saveUser(user);
+            response.setStatus(HttpStatus.OK.toString());
+            response.setMessage("User registered successfully");
+            response.setData(newUser);
+            return ResponseEntity.ok(response);
+        } catch (InvalidUsernameException | InvalidPasswordException e) {
+            response.setStatus(BAD_REQUEST.toString());
+            response.setMessage(e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        } catch (InvalidNameException e) {
+            throw new RuntimeException(e);
+        }
     }
 
+    @ExceptionHandler({InvalidUsernameException.class, InvalidPasswordException.class, InvalidPhoneNoException.class})
+    public ResponseEntity<?> handleValidationExceptions(RuntimeException e) {
+        GenericResponse<Void> response = new GenericResponse<>();
+        response.setStatus(BAD_REQUEST.toString());
+        response.setMessage(e.getMessage());
+        return ResponseEntity.badRequest().body(response);
+    }
 
     @PostMapping("login")
-    public ResponseEntity<Map<String, Object>> login(@RequestBody User user) {
-        Map<String, Object> response = new LinkedHashMap<>();
+    public ResponseEntity<?> login(@RequestBody User user) {
+        GenericResponse<String> response = new GenericResponse<>();
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword()));
 
             if (authentication.isAuthenticated()) {
                 String accessToken = jwtService.generateToken(user.getUsername());
-                response.put("status", HttpStatus.OK.value());
-                response.put("message", "LOGIN SUCCESSFUL");
-                response.put("accessToken", accessToken);
+                response.setStatus(OK.toString());
+                response.setMessage("LOGIN SUCCESSFUL...");
+                response.setData(accessToken);
                 return ResponseEntity.ok(response);
             } else {
-                response.put("status", HttpStatus.UNAUTHORIZED.value());
-                response.put("message", "LOGIN FAILED!!");
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+                response.setStatus(BAD_REQUEST.toString());
+                response.setMessage("Incorrect details!");
+                return ResponseEntity.status(BAD_REQUEST).body(response);
             }
         } catch (AuthenticationException e) {
-            response.put("status", HttpStatus.UNAUTHORIZED.value());
-            response.put("message", "LOGIN FAILED");
-            response.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            response.setStatus(UNAUTHORIZED.toString());
+            response.setMessage("Bad credentials!!");
         }
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
     }
 
 
     @GetMapping("all-users")
-    public ResponseEntity<?> getAllUsernames() {
+    public ResponseEntity<GenericResponse<List<String>>> getAllUsernames() {
+        GenericResponse<List<String>> response = new GenericResponse<>();
         List<String> usernames = userService.getAllUsernames();
-        return ResponseEntity.ok(usernames);
+        response.setStatus(HttpStatus.OK.toString());
+        response.setMessage("Usernames retrieved successfully");
+        response.setData(usernames);
+        return ResponseEntity.ok(response);
     }
 
 
@@ -96,43 +130,52 @@ public class UserController {
     public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest request) {
         try {
             return UserService.changePassword(request.getUsername(), request.getOldPassword(), request.getNewPassword());
-        }
-        catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred");
         }
     }
 
-
     @PostMapping("forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody ForgetPasswordRequest request) {
+        GenericResponse<String> response = new GenericResponse<>();
         String username = request.getUsername();
         User user = userService.findByUsername(username);
         if (user == null) {
-            return ResponseEntity.badRequest().body("User not found");
+            response.setStatus((BAD_REQUEST.toString()));
+            response.setMessage("user not found!");
+            return ResponseEntity.status(BAD_REQUEST).body(response);
         }
         otpService.generateOTP(username);
 
-        return ResponseEntity.ok(Map.of(
-                "message", "OTP sent to email",
-                "redirect", "/reset-password"
-        ));
+        response.setStatus(HttpStatus.OK.toString());
+        response.setMessage("OTP sent to email");
+        response.setData("/reset-password?username=" + username);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("reset-password")
     public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+        GenericResponse<String> response = new GenericResponse<>();
         boolean flag = otpService.validateOTP(request.getUsername(), request.getOtp());
         if (!flag) {
-            return ResponseEntity.badRequest().body("Invalid OTP");
+            response.setStatus(BAD_REQUEST.toString());
+            response.setMessage("Invalid OTP");
+            return ResponseEntity.status(BAD_REQUEST).body(response);
         }
         User user = userService.findByUsername(request.getUsername());
         if (user == null) {
-            return ResponseEntity.badRequest().body("User not found");
+            response.setStatus(BAD_REQUEST.toString());
+            response.setMessage("User not found!");
+            return ResponseEntity.status(BAD_REQUEST).body(response);
         }
         UserService.resetPassword(user.getUsername(), request.getNewPassword());
-        return ResponseEntity.status(HttpStatus.OK).body("Password reset successfully");
+        response.setStatus(OK.toString());
+        response.setMessage("Password reset Successfully for Username:"+ request.getUsername());
+        return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
 }
+
+

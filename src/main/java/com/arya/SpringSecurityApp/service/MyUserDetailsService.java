@@ -1,8 +1,8 @@
 package com.arya.SpringSecurityApp.service;
 
 import com.arya.SpringSecurityApp.repository.UserRepo;
-import com.arya.SpringSecurityApp.model.User;
-import com.arya.SpringSecurityApp.model.UserPrincipal;
+import com.arya.SpringSecurityApp.entity.User;
+import com.arya.SpringSecurityApp.entity.UserPrincipal;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -22,8 +22,8 @@ public class MyUserDetailsService implements UserDetailsService {
         User user= userRepo.findByUsername(username);
 
         if (user==null) {
-            System.out.println("User 404");
-            throw new UsernameNotFoundException("User 404");
+            System.out.println("User not found!");
+            throw new UsernameNotFoundException("User not found");
         }
         return new UserPrincipal(user);
     }

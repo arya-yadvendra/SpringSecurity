@@ -1,4 +1,4 @@
-package com.arya.SpringSecurityApp.model;
+package com.arya.SpringSecurityApp.entity;
 
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
