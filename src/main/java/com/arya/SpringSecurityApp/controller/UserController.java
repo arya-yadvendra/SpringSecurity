@@ -50,34 +50,36 @@ public class UserController {
         GenericResponse<User> response = new GenericResponse<>();
 
         if (userService.existsByUsername(user.getUsername())) {
-            response.setStatus(BAD_REQUEST.toString());
+            response.setStatus("failure");
             response.setMessage("Username already exist!");
             return ResponseEntity.status(BAD_REQUEST).body(response);
         }
 
         if (user.getUsername() == null || user.getPassword() == null) {
-            response.setStatus(BAD_REQUEST.toString());
+            response.setStatus("failure");
             response.setMessage("Email, Password, Name are not allowed to be null");
             return ResponseEntity.status(BAD_REQUEST).body(response);
         }
 
         if (user.getName().length()<2){
-            response.setStatus(BAD_REQUEST.toString());
+            response.setStatus("failure");
             response.setMessage("Name field seems to be incorrect");
             return ResponseEntity.status(BAD_REQUEST).body(response);
         }
 
         try {
             User newUser = userService.saveUser(user);
-            response.setStatus(HttpStatus.OK.toString());
+            response.setStatus("success");
             response.setMessage("User registered successfully");
             response.setData(newUser);
-            return ResponseEntity.ok(response);
-        } catch (InvalidUsernameException | InvalidPasswordException e) {
-            response.setStatus(BAD_REQUEST.toString());
+            return ResponseEntity.status(OK).body(response);
+        }
+        catch (InvalidUsernameException | InvalidPasswordException e) {
+            response.setStatus("failure");
             response.setMessage(e.getMessage());
-            return ResponseEntity.badRequest().body(response);
-        } catch (InvalidNameException e) {
+            return ResponseEntity.status(BAD_REQUEST).body(response);
+        }
+        catch (InvalidNameException e) {
             throw new RuntimeException(e);
         }
     }
@@ -85,9 +87,9 @@ public class UserController {
     @ExceptionHandler({InvalidUsernameException.class, InvalidPasswordException.class, InvalidPhoneNoException.class})
     public ResponseEntity<?> handleValidationExceptions(RuntimeException e) {
         GenericResponse<Void> response = new GenericResponse<>();
-        response.setStatus(BAD_REQUEST.toString());
+        response.setStatus("failure");
         response.setMessage(e.getMessage());
-        return ResponseEntity.badRequest().body(response);
+        return ResponseEntity.status(BAD_REQUEST).body(response);
     }
 
     @PostMapping("login")
@@ -99,17 +101,17 @@ public class UserController {
 
             if (authentication.isAuthenticated()) {
                 String accessToken = jwtService.generateToken(user.getUsername());
-                response.setStatus(OK.toString());
+                response.setStatus("success");
                 response.setMessage("LOGIN SUCCESSFUL...");
                 response.setData(accessToken);
                 return ResponseEntity.ok(response);
             } else {
-                response.setStatus(BAD_REQUEST.toString());
+                response.setStatus("failure");
                 response.setMessage("Incorrect details!");
                 return ResponseEntity.status(BAD_REQUEST).body(response);
             }
         } catch (AuthenticationException e) {
-            response.setStatus(UNAUTHORIZED.toString());
+            response.setStatus("failure");
             response.setMessage("Bad credentials!!");
         }
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
@@ -117,19 +119,29 @@ public class UserController {
 
 
     @GetMapping("all-users")
-    @PreAuthorize("hasRole('admin')")
     public ResponseEntity<GenericResponse<List<String>>> getAllUsernames() {
         GenericResponse<List<String>> response = new GenericResponse<>();
         List<String> usernames = userService.getAllUsernames();
-        response.setStatus(HttpStatus.OK.toString());
+        response.setStatus("success");
         response.setMessage("Usernames retrieved successfully");
         response.setData(usernames);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.status(OK).body(response);
     }
 
 
     @PostMapping("change-password")
-    public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest request) {
+    public ResponseEntity<?> changePassword(@RequestHeader("Authorization") String token,@RequestBody ChangePasswordRequest request) {
+
+        String tokenWithoutBearer = token.substring(7); // Remove 'Bearer ' prefix
+        String usernameFromToken = jwtService.extractUserName(tokenWithoutBearer);
+
+        if (!usernameFromToken.equals(request.getUsername())) {
+            GenericResponse<String> response = new GenericResponse<>();
+            response.setStatus("failure");
+            response.setMessage("You are not authorized to change this user's password");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+        }
+
         try {
             return UserService.changePassword(request.getUsername(), request.getOldPassword(), request.getNewPassword());
         } catch (IllegalArgumentException e) {
@@ -145,13 +157,13 @@ public class UserController {
         String username = request.getUsername();
         User user = userService.findByUsername(username);
         if (user == null) {
-            response.setStatus((BAD_REQUEST.toString()));
+            response.setStatus("failure");
             response.setMessage("user not found!");
             return ResponseEntity.status(BAD_REQUEST).body(response);
         }
         otpService.generateOTP(username);
 
-        response.setStatus(HttpStatus.OK.toString());
+        response.setStatus("success");
         response.setMessage("OTP sent to email");
         response.setData("/reset-password?username=" + username);
         return ResponseEntity.ok(response);
@@ -162,18 +174,18 @@ public class UserController {
         GenericResponse<String> response = new GenericResponse<>();
         boolean flag = otpService.validateOTP(request.getUsername(), request.getOtp());
         if (!flag) {
-            response.setStatus(BAD_REQUEST.toString());
+            response.setStatus("failure");
             response.setMessage("Invalid OTP");
             return ResponseEntity.status(BAD_REQUEST).body(response);
         }
         User user = userService.findByUsername(request.getUsername());
         if (user == null) {
-            response.setStatus(BAD_REQUEST.toString());
+            response.setStatus("failure");
             response.setMessage("User not found!");
             return ResponseEntity.status(BAD_REQUEST).body(response);
         }
         UserService.resetPassword(user.getUsername(), request.getNewPassword());
-        response.setStatus(OK.toString());
+        response.setStatus("success");
         response.setMessage("Password reset Successfully for Username:"+ request.getUsername());
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }

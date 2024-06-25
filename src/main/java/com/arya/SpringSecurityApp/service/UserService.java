@@ -87,29 +87,29 @@ public class UserService {
         Optional<User> optionalUser = Optional.ofNullable(userRepo.findByUsername(username));
 
         if (optionalUser.isEmpty()) {
-            response.setStatus(HttpStatus.BAD_REQUEST.toString());
+            response.setStatus("failure");
             response.setMessage("User doesn't exist!");
         }
         else {
             if(oldPassword == null || newPassword==null){
-                response.setData(HttpStatus.BAD_REQUEST.toString());
+                response.setData("failure");
                 response.setMessage("Old or New Password can't be null!");
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
             }
             User user = optionalUser.get();
             if (!encoder.matches(oldPassword, user.getPassword())) {
 
-                response.setStatus(HttpStatus.BAD_REQUEST.toString());
+                response.setStatus("failure");
                 response.setMessage("Old Password is incorrect!");
             }
             else if (isValidPassword(newPassword)) {
-                response.setStatus(HttpStatus.BAD_REQUEST.toString());
+                response.setStatus("failure");
                 response.setMessage("New password does not meet the criteria");
             }
             else {
                 user.setPassword(encoder.encode(newPassword));
                 userRepo.save(user);
-                response.setStatus(HttpStatus.OK.toString());
+                response.setStatus("success");
                 response.setMessage("Password changed successfully!!");
             }
         }

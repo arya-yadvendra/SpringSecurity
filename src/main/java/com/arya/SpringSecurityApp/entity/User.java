@@ -26,11 +26,10 @@ public class User {
     @NotNull
     private String name;
 
+
     private String phone_no;
 
 
     private String address;
 
-
-    private String role;
 }

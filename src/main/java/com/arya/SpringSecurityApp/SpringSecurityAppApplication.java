@@ -5,7 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 
 @SpringBootApplication
-@EntityScan(basePackages = {"com.arya.SpringSecurityApp.model"})
+@EntityScan(basePackages = {"com.arya.SpringSecurityApp.entity"})
 public class SpringSecurityAppApplication {
 
 	public static void main(String[] args) {
