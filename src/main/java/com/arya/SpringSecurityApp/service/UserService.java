@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 
 import javax.naming.InvalidNameException;
 import java.util.List;
@@ -41,7 +42,7 @@ public class UserService {
         if (isValidPassword(user.getPassword())) {
             throw new InvalidPasswordException("Password does not meet the criteria");
         }
-        if (!isValidPhoneNo(user.getPhone_no())){
+        if (!isValidPhoneNo(user.getPhoneNumber())){
             throw new InvalidPhoneNoException("Phone number is invalid");
         }
 
@@ -90,30 +91,41 @@ public class UserService {
             response.setStatus("failure");
             response.setMessage("User doesn't exist!");
         }
-        else {
-            if(oldPassword == null || newPassword==null){
-                response.setData("failure");
-                response.setMessage("Old or New Password can't be null!");
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-            }
-            User user = optionalUser.get();
-            if (!encoder.matches(oldPassword, user.getPassword())) {
+        User user = optionalUser.get();
 
-                response.setStatus("failure");
-                response.setMessage("Old Password is incorrect!");
-            }
-            else if (isValidPassword(newPassword)) {
-                response.setStatus("failure");
-                response.setMessage("New password does not meet the criteria");
-            }
-            else {
-                user.setPassword(encoder.encode(newPassword));
-                userRepo.save(user);
-                response.setStatus("success");
-                response.setMessage("Password changed successfully!!");
-            }
+        if(oldPassword == null || newPassword==null){
+            response.setData("failure");
+            response.setMessage("Old or New Password can't be null!");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        if (!encoder.matches(oldPassword, user.getPassword())) {
+            response.setStatus("failure");
+            response.setMessage("Old Password is incorrect!");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+        if (isValidPassword(newPassword)) {
+            response.setStatus("failure");
+            response.setMessage("New password does not meet the criteria");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+
+        // Checking for newPassword matches with previous three passwords
+        if (encoder.matches(newPassword, user.getPassword()) ||
+                encoder.matches(newPassword, user.getPassword_1()) ||
+                encoder.matches(newPassword, user.getPassword_2())) {
+            response.setStatus("failure");
+            response.setMessage("New password should be different from the last 3 previous passwords!");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+
+        user.setPassword_2(user.getPassword_1());
+        user.setPassword_1(user.getPassword());
+        user.setPassword(encoder.encode(newPassword));
+        userRepo.save(user);
+        response.setStatus("success");
+        response.setMessage("Password changed successfully!!");
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+
     }
 
 
@@ -121,15 +133,30 @@ public class UserService {
         return userRepo.findByUsername(email);
     }
 
-    public static void resetPassword(String username, String newPassword) {
-        Optional<User> optionalUser = Optional.ofNullable(userRepo.findByUsername(username));
-        if (optionalUser.isEmpty()) {
-            ResponseEntity.status(HttpStatus.BAD_REQUEST).body("User Not Found");
-            return;
+    public static ResponseEntity<?> resetPassword(String username, String newPassword) {
+        User user = userRepo.findByUsername(username);
+        GenericResponse<String> response = new GenericResponse<>();
+
+        if (isValidPassword(newPassword)) {
+            response.setStatus("failure");
+            response.setMessage("New password does not meet the criteria");
         }
-        User user = optionalUser.get();
-        user.setPassword(encoder.encode(newPassword));
-        userRepo.save(user);
-        ResponseEntity.status(HttpStatus.OK).body("Password changed successfully!!");
+        else if (encoder.matches(newPassword, user.getPassword()) ||
+                encoder.matches(newPassword, user.getPassword_1()) ||
+                encoder.matches(newPassword, user.getPassword_2())) {
+            response.setStatus("failure");
+            response.setMessage("New password should be different from the last 3 previous passwords!");
+        }
+        else {
+            user.setPassword_2(user.getPassword_1());
+            user.setPassword_1(user.getPassword());
+            user.setPassword(encoder.encode(newPassword));
+            userRepo.save(user);
+            response.setStatus("success");
+            response.setMessage("Password reset successfully");
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
+
+
 }

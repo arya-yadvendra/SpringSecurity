@@ -1,9 +1,6 @@
 package com.arya.SpringSecurityApp.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import org.hibernate.annotations.GenericGenerator;
@@ -21,15 +18,21 @@ public class User {
     private String username;
 
     @NotNull
-    private String password;
+    @Column(name = "password")
+    private String Password;
 
     @NotNull
     private String name;
 
-
-    private String phone_no;
-
+    @Column(name = "phonenumber")
+    private String phoneNumber;
 
     private String address;
+
+    @Column(name="password1")
+    private String password_1;
+
+    @Column(name = "password2")
+    private String password_2;
 
 }

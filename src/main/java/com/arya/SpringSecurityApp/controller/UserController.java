@@ -7,13 +7,16 @@ import com.arya.SpringSecurityApp.exception.InvalidUsernameException;
 import com.arya.SpringSecurityApp.request.ChangePasswordRequest;
 import com.arya.SpringSecurityApp.request.ForgetPasswordRequest;
 import com.arya.SpringSecurityApp.entity.User;
+import com.arya.SpringSecurityApp.request.LoginRequest;
 import com.arya.SpringSecurityApp.request.ResetPasswordRequest;
+import com.arya.SpringSecurityApp.response.AuthResponse;
 import com.arya.SpringSecurityApp.response.GenericResponse;
 import com.arya.SpringSecurityApp.service.JwtService;
 import com.arya.SpringSecurityApp.service.OTPService;
 import com.arya.SpringSecurityApp.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -24,8 +27,15 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.*;
 
 import javax.naming.InvalidNameException;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.Date;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
+import static com.arya.SpringSecurityApp.service.UserService.isValidPassword;
 import static org.springframework.http.HttpStatus.*;
 
 
@@ -93,17 +103,25 @@ public class UserController {
     }
 
     @PostMapping("login")
-    public ResponseEntity<?> login(@RequestBody User user) {
-        GenericResponse<String> response = new GenericResponse<>();
+    public ResponseEntity<?> login(@RequestBody LoginRequest user) {
+        GenericResponse<AuthResponse> response = new GenericResponse<>();
+
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword()));
 
             if (authentication.isAuthenticated()) {
-                String accessToken = jwtService.generateToken(user.getUsername());
+                String auth_Token = jwtService.generateToken(user.getUsername());
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy 'T': HH:mm:ss.SS");
+                String issuedTime = LocalDateTime.now().format(formatter);
+                String validTime = jwtService.extractExpiration(auth_Token)
+                        .toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()
+                        .format(formatter);
+
+                AuthResponse authResponse = new AuthResponse(auth_Token, user.getUsername(), issuedTime, validTime);
                 response.setStatus("success");
                 response.setMessage("LOGIN SUCCESSFUL...");
-                response.setData(accessToken);
+                response.setData(authResponse);
                 return ResponseEntity.ok(response);
             } else {
                 response.setStatus("failure");
@@ -119,8 +137,17 @@ public class UserController {
 
 
     @GetMapping("all-users")
-    public ResponseEntity<GenericResponse<List<String>>> getAllUsernames() {
+    public ResponseEntity<GenericResponse<List<String>>> getAllUsernames(@RequestHeader("Authorization") String token) {
+
         GenericResponse<List<String>> response = new GenericResponse<>();
+
+        String tokenWithoutBearer = token.substring(7);
+        String usernameFromToken = jwtService.extractUserName(tokenWithoutBearer);
+        if(!Objects.equals(usernameFromToken, "arya.admin@yopmail.com")){
+            response.setStatus("failure");
+            response.setMessage("User list can only be accessed by admin only!");
+            return ResponseEntity.status(OK).body(response);
+        }
         List<String> usernames = userService.getAllUsernames();
         response.setStatus("success");
         response.setMessage("Usernames retrieved successfully");
@@ -132,11 +159,17 @@ public class UserController {
     @PostMapping("change-password")
     public ResponseEntity<?> changePassword(@RequestHeader("Authorization") String token,@RequestBody ChangePasswordRequest request) {
 
-        String tokenWithoutBearer = token.substring(7); // Remove 'Bearer ' prefix
+        GenericResponse<String> response = new GenericResponse<>();
+        if (token==null || token.isEmpty()) {
+            response.setStatus("failure");
+            response.setMessage("Authorization token is required");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+        }
+
+        String tokenWithoutBearer = token.substring(7);
         String usernameFromToken = jwtService.extractUserName(tokenWithoutBearer);
 
         if (!usernameFromToken.equals(request.getUsername())) {
-            GenericResponse<String> response = new GenericResponse<>();
             response.setStatus("failure");
             response.setMessage("You are not authorized to change this user's password");
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
@@ -172,24 +205,20 @@ public class UserController {
     @PostMapping("reset-password")
     public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
         GenericResponse<String> response = new GenericResponse<>();
+        Optional<User> user = Optional.ofNullable(userService.findByUsername(request.getUsername()));
+        if(user.isEmpty()){
+            response.setStatus("failure");
+            response.setMessage("Incorrect email or User not exist!");
+            return  ResponseEntity.status(BAD_REQUEST).body(response);
+        }
         boolean flag = otpService.validateOTP(request.getUsername(), request.getOtp());
         if (!flag) {
             response.setStatus("failure");
             response.setMessage("Invalid OTP");
             return ResponseEntity.status(BAD_REQUEST).body(response);
         }
-        User user = userService.findByUsername(request.getUsername());
-        if (user == null) {
-            response.setStatus("failure");
-            response.setMessage("User not found!");
-            return ResponseEntity.status(BAD_REQUEST).body(response);
-        }
-        UserService.resetPassword(user.getUsername(), request.getNewPassword());
-        response.setStatus("success");
-        response.setMessage("Password reset Successfully for Username:"+ request.getUsername());
-        return ResponseEntity.status(HttpStatus.OK).body(response);
+        return UserService.resetPassword(request.getUsername(), request.getNewPassword());
     }
-
 }
 
 

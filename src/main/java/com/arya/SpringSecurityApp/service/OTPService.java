@@ -62,9 +62,10 @@ public class OTPService {
 
     private void sendEmail(String username, String otp) {
         final String subject = "Password Forget Request";
-        final String message = "This OTP is sent regarding the reset of Password. " +
-                "Valid only for 5 minutes from now. \n Your OTP: ";
-        emailService.sendEmail(username, subject, message + otp);
+        final String message = "<html><body><p>This OTP is sent regarding the reset of Password.<br/>" +
+                "Valid only for 5 minutes from now.<br/><br/>" +
+                "Your OTP: " + otp + "</p></body></html>";
+        emailService.sendEmail(username, subject, message);
     }
 
 }
