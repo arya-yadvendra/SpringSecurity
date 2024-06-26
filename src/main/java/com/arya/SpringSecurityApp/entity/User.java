@@ -1,5 +1,6 @@
 package com.arya.SpringSecurityApp.entity;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -8,6 +9,7 @@ import org.hibernate.annotations.GenericGenerator;
 @Data
 @Table(name = "users")
 @Entity
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class User {
     @Id
     @GeneratedValue(generator = "system-uuid")

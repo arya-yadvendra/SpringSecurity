@@ -27,6 +27,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.*;
 
 import javax.naming.InvalidNameException;
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -185,7 +186,7 @@ public class UserController {
     }
 
     @PostMapping("forgot-password")
-    public ResponseEntity<?> forgotPassword(@RequestBody ForgetPasswordRequest request) {
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgetPasswordRequest request) throws IOException {
         GenericResponse<String> response = new GenericResponse<>();
         String username = request.getUsername();
         User user = userService.findByUsername(username);

@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 
 @Service
@@ -30,7 +31,7 @@ public class OTPService {
 
     private static final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
 
-    public void generateOTP(String username) {
+    public void generateOTP(String username) throws IOException {
         String otp = String.valueOf((int) (Math.random() * 9000) + 1000); // Generate a 4-digit OTP
 
         OTP otpEntity = null;
@@ -60,7 +61,7 @@ public class OTPService {
                 && otpEntity.getOtp().equals(otp);
     }
 
-    private void sendEmail(String username, String otp) {
+    private void sendEmail(String username, String otp) throws IOException {
         final String subject = "Password Forget Request";
         final String message = "<html><body><p>This OTP is sent regarding the reset of Password.<br/>" +
                 "Valid only for 5 minutes from now.<br/><br/>" +
